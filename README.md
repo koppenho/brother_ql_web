@@ -1,3 +1,6 @@
+> This is a Work In Progress (WIP) \
+> :warning: You should not yet use it.
+
 ## brother\_ql\_web
 
 This is a web service to print labels on Brother QL label printers.
@@ -13,7 +16,10 @@ There's also a screenshot showing [how it looks on a smartphone](./static/images
 
 **ProTip™**: If you know how to use Docker, you might want to use my ready-to-use Docker image to deploy this software.
 It can be found [on the Docker hub](https://hub.docker.com/r/pklaus/brother_ql_web/).  
-Otherwise, follow the instructions below.
+> :warning: The mentioned docker image did not work for me. It took me about a day or two to figure out the root cause.
+> After I have finished work on this fork, I plan to publish a new docker image.
+
+For manual installation, follow the instructions below.
 
 Get the code:
 
