@@ -93,7 +93,7 @@ I use the following parameters in grocy's config.php file:
 
     // The URI that grocy will POST to when asked to print a label
     // You may have to replace 'localhost' by a hostname or IP address
-    Setting('LABEL_PRINTER_WEBHOOK', 'http://localhost:8013/api/print grocy');
+    Setting('LABEL_PRINTER_WEBHOOK', 'http://localhost:8013/api/print/grocy');
     // Additional parameters supplied to the webhook
     // Currently 'font_family' must be set to a known font name
     Setting('LABEL_PRINTER_PARAMS', ['font_family' => 'DejaVu Sans (Book)']);
