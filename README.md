@@ -1,5 +1,6 @@
-> This is a Work In Progress (WIP) \
-> :warning: You should not yet use it.
+> [koppenho](https://github.com/koppenho): This fork is a Work In Progress (WIP) \
+> :warning: You shouldn't be using it yet. This software is unfinished, it can kill your cat, burn down your house or just waste your time.
+
 
 ## brother\_ql\_web
 
@@ -16,7 +17,7 @@ There's also a screenshot showing [how it looks on a smartphone](./static/images
 
 **ProTip™**: If you know how to use Docker, you might want to use my ready-to-use Docker image to deploy this software.
 It can be found [on the Docker hub](https://hub.docker.com/r/pklaus/brother_ql_web/).  
-> :warning: The mentioned docker image did not work for me. It took me about a day or two to figure out the root cause.
+> :warning: [koppenho](https://github.com/koppenho): The mentioned docker image did not work for me. It took me about a day or two to figure out the root cause.
 > After I have finished work on this fork, I plan to publish a new docker image.
 
 For manual installation, follow the instructions below.
