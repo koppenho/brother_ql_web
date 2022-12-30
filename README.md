@@ -1,5 +1,4 @@
-> [koppenho](https://github.com/koppenho): This fork is a Work In Progress (WIP) \
-> :warning: You shouldn't be using it yet. This software is unfinished, it can kill your cat, burn down your house or just waste your time.
+> :warning: This software is not of high quality, is incomplete and does not respond well to errors or misconfiguration. I've done my best to make it work and do what I need - label printing with "grocy". But for that I had to mess around in python code without any experience with the programming language.
 
 
 ## brother\_ql\_web
@@ -84,7 +83,7 @@ All in all, the web server offers:
 * a Web GUI allowing you to print your labels at `/labeldesigner`,
 * an API at `/api/print/text?text=Your_Text&font_size=100&font_family=DejaVu%20Sans%20(Book)`
   to print a label containing 'Your Text' with the specified font properties.
-* You may test grocy label printing without actually printing. The folling command will save an image of the generated and to-be-printed label in file `image.png`.
+* You may test grocy label printing without actually printing. The following command will save an image of the generated and to-be-printed label in file `image.png`.
 
   `curl -S -o image.png 'http://localhost:8013/api/preview/grocy?product=Applejuice&grocycode=grcy:p:4711:63ad991cdc1a9&font_family=DejaVu%20Sans%20(Book)&due_date=2099-12-31'`
 
