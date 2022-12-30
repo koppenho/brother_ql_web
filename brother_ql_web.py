@@ -10,6 +10,7 @@ from io import BytesIO
 
 from bottle import run, route, get, post, response, request, jinja2_view as view, static_file, redirect
 from PIL import Image, ImageDraw, ImageFont
+from pylibdmtx.pylibdmtx import encode
 
 from brother_ql.devicedependent import models, label_type_specs, label_sizes
 from brother_ql.devicedependent import ENDLESS_LABEL, DIE_CUT_LABEL, ROUND_DIE_CUT_LABEL
@@ -66,18 +67,19 @@ def get_label_context(request):
       'threshold': int(d.get('threshold', 70)),
       'align':         d.get('align', 'center'),
       'orientation':   d.get('orientation', 'standard'),
-      'margin_top':    float(d.get('margin_top',    24))/100.,
-      'margin_bottom': float(d.get('margin_bottom', 45))/100.,
-      'margin_left':   float(d.get('margin_left',   35))/100.,
-      'margin_right':  float(d.get('margin_right',  35))/100.,
+      'margin_top':    float(d.get('margin_top',    0))/100.,
+      'margin_bottom': float(d.get('margin_bottom', 0))/100.,
+      'margin_left':   float(d.get('margin_left',   0))/100.,
+      'margin_right':  float(d.get('margin_right',  0))/100.,
       'grocycode': d.get('grocycode', None),
       'product': d.get('product', None),
-      'duedate': d.get('duedate', None)
+      'duedate': d.get('duedate', d.get('due_date', None)),
     }
     context['margin_top']    = int(context['font_size']*context['margin_top'])
     context['margin_bottom'] = int(context['font_size']*context['margin_bottom'])
     context['margin_left']   = int(context['font_size']*context['margin_left'])
     context['margin_right']  = int(context['font_size']*context['margin_right'])
+    context['padding']       = int(context['font_size']*0.1)
 
     context['fill_color']  = (255, 0, 0) if 'red' in context['label_size'] else (0, 0, 0)
 
@@ -153,55 +155,87 @@ def create_label_grocy(text, **kwargs):
     duedate = kwargs['duedate']
     grocycode = kwargs['grocycode']
 
-
     # prepare grocycode datamatrix
-    from pylibdmtx.pylibdmtx import encode
     encoded = encode(grocycode.encode('utf8'), size="SquareAuto") # adjusted for 300x300 dpi - results in DM code roughly 5x5mm
+    #encoded = encode(grocycode.encode('utf8'), size="52x52")
     datamatrix = Image.frombytes('RGB', (encoded.width, encoded.height), encoded.pixels)
     datamatrix.save('/tmp/dmtx.png')
 
-    product_font = ImageFont.truetype(kwargs['font_path'], 100)
-    duedate_font = ImageFont.truetype(kwargs['font_path'], 60)
-    width = kwargs['width']
-    height = 200
-    if kwargs['orientation'] == 'rotated':
-        tw = width
-        width = height
-        height = tw
+    product_font = ImageFont.truetype(kwargs['font_path'], 45)
+    best_by_font = ImageFont.truetype(kwargs['font_path'], 35)
+    code_font = ImageFont.truetype(kwargs["font_path"], 25)
+    width = kwargs["width"]
+    height = encoded.height + kwargs["margin_bottom"]
 
     im = Image.new('RGB', (width, height), 'white')
     draw = ImageDraw.Draw(im)
-    if kwargs['orientation'] == 'standard':
-        vertical_offset = kwargs['margin_top']
-        horizontal_offset = kwargs['margin_left']
-    elif kwargs['orientation'] == 'rotated':
-        vertical_offset = kwargs['margin_top']
-        horizontal_offset = kwargs['margin_left']
-        datamatrix.transpose(Image.ROTATE_270)
 
-    im.paste(datamatrix, (horizontal_offset, vertical_offset, horizontal_offset + encoded.width, vertical_offset + encoded.height))
-
-    if kwargs['orientation'] == 'standard':
-        vertical_offset += -10
-        horizontal_offset = encoded.width + 40
-    elif kwargs['orientation'] == 'rotated':
-        vertical_offset += encoded.width + 40
-        horizontal_offset += -10
-
+    vertical_offset = kwargs["margin_top"]
+    horizontal_offset = kwargs["margin_left"]
     textoffset = horizontal_offset, vertical_offset
 
-    draw.text(textoffset, product, kwargs['fill_color'], font=product_font)
+    producttext = " ".join(product.split("\n")).strip()
+    lines = []
+    while len(producttext) > 0:
+        for i in range(len(producttext), 1, -1):
+            subtext = producttext[0:i]
+            if draw.textlength(subtext, font=product_font) < (
+                width - kwargs["margin_right"]
+            ):
+                lines.append(subtext)
+                producttext = producttext[i:].strip()
+                break
 
-    if duedate is not None:
-        if kwargs['orientation'] == 'standard':
-            vertical_offset += 110
-            horizontal_offset = kwargs['margin_left']
-        elif kwargs['orientation'] == 'rotated':
-            vertical_offset = kwargs['margin_left']
-            horizontal_offset += 110
-        textoffset = horizontal_offset, vertical_offset
+    title_text = "\n".join(lines)
+    grocycode_text = grocycode
+    #best_by_text = "Best By: \n" + ("unknown" if duedate is None else duedate)
+    if duedate is None:
+        best_by_text = "\nohne MHD"
+    else:
+        best_by_text = "\n" + duedate
 
-        draw.text(textoffset, duedate, kwargs['fill_color'], font=duedate_font)
+    title_textsize = draw.multiline_textsize(title_text, font=product_font)
+    grocycode_textsize = draw.textsize(grocycode_text, font=code_font)
+    best_by_textsize = draw.multiline_textsize(best_by_text, font=best_by_font)
+
+    # Increase the size of the image to accomodate the text
+    height = (
+        kwargs["margin_top"]
+        + title_textsize[1]
+        + kwargs["padding"]
+        + grocycode_textsize[1]
+        + encoded.height
+        + kwargs["margin_bottom"]
+    )
+    newim = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(newim)
+    newim.paste(im)
+    im = newim
+
+    draw.multiline_text(textoffset, title_text, kwargs["fill_color"], font=product_font)
+    vertical_offset = vertical_offset + title_textsize[1] + kwargs["padding"]
+    textoffset = horizontal_offset, vertical_offset
+
+    # Draw the barcode and "best by" next to it
+    im.paste(
+        datamatrix,
+        (
+            horizontal_offset,
+            vertical_offset,
+            horizontal_offset + encoded.width,
+            vertical_offset + encoded.height,
+        ),
+    )
+    draw.multiline_text(
+        (horizontal_offset + encoded.width, vertical_offset),
+        best_by_text,
+        kwargs["fill_color"],
+        font=best_by_font,
+    )
+    vertical_offset = vertical_offset + encoded.height
+    textoffset = horizontal_offset, vertical_offset
+
+    draw.text(textoffset, f"{grocycode}", kwargs["fill_color"], font=code_font)
 
     return im
 
@@ -215,15 +249,41 @@ def get_preview_image():
         import base64
         response.set_header('Content-type', 'text/plain')
         return base64.b64encode(image_to_png_bytes(im))
-    else:
-        response.set_header('Content-type', 'image/png')
-        return image_to_png_bytes(im)
+    
+    response.set_header('Content-type', 'image/png')
+    return image_to_png_bytes(im)
 
 def image_to_png_bytes(im):
     image_buffer = BytesIO()
     im.save(image_buffer, format="PNG")
     image_buffer.seek(0)
     return image_buffer.read()
+
+@get('/api/preview/grocy')
+@post('/api/preview/grocy')
+def get_preview_grocy():
+
+    return_dict = {'success' : False }
+
+    try:
+        context = get_label_context(request)
+    except LookupError as e:
+        return_dict['error'] = e.msg
+        return return_dict
+
+    if context['product'] is None:
+        return_dict['error'] = 'Please provide the product for the label'
+        return return_dict
+
+    im = create_label_grocy(**context)
+    return_format = request.query.get('return_format', 'png')
+    if return_format == 'base64':
+        import base64
+        response.set_header('Content-type', 'text/plain')
+        return base64.b64encode(image_to_png_bytes(im))
+    else:
+        response.set_header('Content-type', 'image/png')
+        return image_to_png_bytes(im)
 
 @post('/api/print/grocy')
 @get('/api/print/grocy')
