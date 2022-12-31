@@ -190,20 +190,20 @@ def create_label_grocy(text, **kwargs):
     grocycode_text = grocycode
     #best_by_text = "Best By: \n" + ("unknown" if duedate is None else duedate)
     if duedate is None:
-        best_by_text = "\nohne MHD"
+        best_by_text = " "
     else:
-        best_by_text = "\n" + duedate
+        best_by_text = duedate
 
     title_textsize = draw.multiline_textsize(title_text, font=product_font)
     grocycode_textsize = draw.textsize(grocycode_text, font=code_font)
-    best_by_textsize = draw.multiline_textsize(best_by_text, font=best_by_font)
+    #best_by_textsize = draw.multiline_textsize(best_by_text, font=best_by_font)
 
     # Increase the size of the image to accomodate the text
     height = (
         kwargs["margin_top"]
         + title_textsize[1]
         + kwargs["padding"]
-        + grocycode_textsize[1]
+        #+ grocycode_textsize[1]
         + encoded.height
         + kwargs["margin_bottom"]
     )
@@ -226,16 +226,23 @@ def create_label_grocy(text, **kwargs):
             vertical_offset + encoded.height,
         ),
     )
-    draw.multiline_text(
-        (horizontal_offset + encoded.width, vertical_offset),
+    draw.text(
+        (horizontal_offset + encoded.width + 10, vertical_offset + 20),
         best_by_text,
         kwargs["fill_color"],
         font=best_by_font,
     )
-    vertical_offset = vertical_offset + encoded.height
+    
+    # place grocycode right to datamatrix but below best_by
+    horizontal_offset = horizontal_offset + encoded.width + 10
+    vertical_offset = vertical_offset + encoded.height - grocycode_textsize[1]
     textoffset = horizontal_offset, vertical_offset
-
     draw.text(textoffset, f"{grocycode}", kwargs["fill_color"], font=code_font)
+    
+    # place grocycode below datamatrix
+    #vertical_offset = vertical_offset + encoded.height
+    #textoffset = horizontal_offset, vertical_offset
+    #draw.text(textoffset, f"{grocycode}", kwargs["fill_color"], font=code_font)
 
     return im
 
