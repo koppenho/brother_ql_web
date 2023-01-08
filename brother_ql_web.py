@@ -19,6 +19,13 @@ from brother_ql.backends import backend_factory, guess_backend
 
 from font_helpers import get_fonts
 
+import signal
+def handler(signum, frame):
+    sys.stderr.write("Shutting down...\n")
+    sys.exit(1)
+
+signal.signal(signal.SIGTERM, handler)
+
 logger = logging.getLogger(__name__)
 
 LABEL_SIZES = [ (name, label_type_specs[name]['name']) for name in label_sizes]
@@ -177,8 +184,8 @@ def create_label_grocy(text, **kwargs):
     producttext = " ".join(product.split("\n")).strip()
     lines = []
     while len(producttext) > 0:
-        for i in range(len(producttext), 1, -1):
-            subtext = producttext[0:i]
+        for i in range(len(producttext), 0, -1):
+            subtext = producttext[0:i].strip()
             if draw.textlength(subtext, font=product_font) < (
                 width - kwargs["margin_right"]
             ):
